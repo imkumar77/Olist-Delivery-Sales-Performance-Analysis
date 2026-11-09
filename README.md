@@ -1,8 +1,8 @@
 # Olist-Delivery-Sales-Performance-Analysis
 > **Where is a Brazilian e-commerce marketplace losing customer satisfaction, and what should operations fix first?**
 An end-to-end business analytics project on 96,203 delivered marketplace orders (Jan 2017 – Aug 2018), built with SQL, advanced Excel and Power BI. It goes from raw relational data to a prioritised, quantified recommendation.
-Tools: SQL (SQLite) · Excel · Power BI (DAX) · Python (data loading only)
-![Dashboard](dashboard/dashboard_preview.png)
+Tools: SQL (SQLite) · Excel · Power BI (DAX) · 
+
 <!-- After you build your Power BI report, add your own screenshots here, e.g.
 ![Power BI - Executive Summary](dashboard/powerbi_page1_executive_summary.png)
 ---
