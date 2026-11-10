@@ -97,6 +97,7 @@ CASE WHEN days_vs_promise <= -7 THEN '1. 7+ days early'
      ELSE '6. 15+ days late' END AS bucket
 ~~~
 
+
 # Univariate Analysis
 
 <img width="802" height="447" alt="image" src="https://github.com/user-attachments/assets/9901e117-3204-46c5-a83d-91fbf22be1f9" />
