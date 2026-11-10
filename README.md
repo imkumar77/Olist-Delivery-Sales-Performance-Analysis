@@ -1,153 +1,179 @@
-# Olist-Delivery-Sales-Performance-Analysis
-> **Where is a Brazilian e-commerce marketplace losing customer satisfaction, and what should operations fix first?**
-An end-to-end business analytics project on 96,203 delivered marketplace orders (Jan 2017 – Aug 2018), built with SQL, advanced Excel and Power BI. It goes from raw relational data to a prioritised, quantified recommendation.
-Tools: SQL (SQLite) · Excel · Power BI (DAX) · 
+## Olist-Delivery-Sales-Analysis
 
----
-# Table of contents
-- Business problem
-- Key findings
-- Recommendations
-- Approach
-- Repository structure
-- Data
-- Metric definitions
-- How to reproduce
-- Skills demonstrated
-- Limitations
-- Next steps
-- About me
----
-1. Business problem
-Olist connects small sellers to customers across Brazil. Leadership sees an average review of 4.16 / 5 and an 8.1% late-delivery rate, and wants to know:
-How much does a late delivery really cost in customer satisfaction?
-Is lateness spread evenly, or concentrated in particular regions, sellers or periods?
-With limited operational capacity, what should be fixed first, and what is it worth?
+The objective of this project is to find out where an e-commerce marketplace loses customer satisfaction because of late deliveries, and what operations should fix first. The analysis covers 96,203 delivered orders from Jan 2017 to Aug 2018. By finding where lateness is concentrated and what it costs in reviews, the goal is to help operations plan fixes in order of impact.
 
-3. Key findings
-#	Finding	Evidence
-1	Late deliveries wreck reviews	Late orders average 2.57★ vs 4.30★ on time. 54% of late orders get a 1–2★ review vs 9% on time (≈6x).
-2	The damage is a cliff, not a slope	Orders 1–3 days late still average 3.77★; at 4–7 days late it falls to 2.32★; beyond 8 days it sits at ~1.7★.
-3	Lateness is concentrated	Rio de Janeiro, Bahia and Ceará hold 66% of all "excess" late orders; Rio alone holds 46% (13.5% late vs ~6% in São Paulo).
-4	Distance matters	Cross-state orders are late 9.0% of the time and take 15.0 days; same-state: 6.0% and 7.9 days.
-5	Peak demand breaks delivery	Black Friday month (Nov 2017) was 7.6% of orders but 13.3% of all late orders; the late rate hit 20–23% for six straight days.
-6	Revenue is concentrated in a few sellers	The top 10% of sellers generate 67% of GMV. The 20 sellers with the most late orders account for 24% of all late orders.
-7	Honest caveat: repeat purchase is a weak lever	Only ~3% of customers ever reorder. First-order-late customers repeat 28% less (2.16% vs 2.98%, p = 0.002), but the revenue effect is small (about R$530 in the 50% scenario). The prize is reputation, not repeat sales.
-4. Recommendations
-#	Action	Rationale	Estimated impact
-1	Last-mile / carrier review in RJ, BA and CE first	66% of excess lateness	Halving it avoids ≈474 late orders and ≈212 negative reviews; national late rate 8.13% → 7.64%
-2	Seller watchlist: SLA improvement plans for the 5 worst high-volume sellers	Concentrated and controllable; several are also high-revenue sellers	≈214 excess late orders across the 5
-3	Peak-season playbook (capacity cut-offs, carrier pre-booking, ETA padding in risky lanes)	Black Friday: 13% of late orders from 7.6% of volume	Protects the highest-traffic cohort
-4	A/B test region-aware delivery promises	Average promise is 23.6 days vs 12.5 actual, so lateness is a tail problem in specific lanes	Hypothesis to test, not a certainty
-Recommendations 3 and 4 are hypotheses: the data shows where the problem is, not why. Full write-up: docs/Case_Study.md.
-5. Approach
-Step	What I did	Tool
-Model	Joined 8 tables into reusable views at order and item grain (handled multi-item orders and multiple reviews per order)	SQL
-Define	Set metric definitions; excluded undelivered orders and the sparse periods (2016, Sep–Oct 2018)	SQL
-Analyse	Trend, review impact, repeat-purchase cohort, state / category / seller scorecards, Black Friday stress test	SQL (`LAG`, `RANK`, `NTILE`, `ROW_NUMBER`, running `SUM() OVER`)
-Prioritise	Built an excess late orders metric to rank where to act, not just who is worst by rate	SQL + Excel
-Quantify	What-if model with adjustable assumptions and a sensitivity table	Excel
-Communicate	Executive dashboard and one-page recommendation	Power BI
+📎 Code: https://github.com/imkumar77/Olist-Delivery-Sales-Performance-Analysis/edit/main/README.md
 
-6. Repository structure
-```
-olist-delivery-sales-analysis/
-├── README.md
-├── run_all.sh                 # rebuild everything from the raw CSVs
-├── requirements.txt
-├── sql/
-│   ├── 00_load_data.py        # load the 8 CSVs into SQLite (olist.db)
-│   ├── 01_views.sql           # v_order_value, v_order_facts, v_item_facts
-│   ├── 02_analysis.sql        # KPIs, trend, reviews, cohort, state/category/seller analysis
-│   ├── 03_prioritisation.sql  # excess-late ranking, concentration, Black Friday
-│   └── run_sql.py             # runs a .sql file, exports each result to data/out/*.csv
-├── excel/
-│   ├── Olist_Delivery_Sales_Analysis.xlsx   # live-formula model + what-if (371 formulas)
-│   └── build_workbook.py
-├── powerbi/                   # CSVs to import into Power BI
-├── dashboard/                 # static blueprint (HTML + PNG) of the target dashboard
-└── docs/
-    ├── Case_Study.md          # full write-up
-    ├── PowerBI_Build_Guide.md # data model, DAX measures, page layouts
-    └── Resume_and_Interview_Prep.md
-```
-Excel workbook tabs
-Tab	Contents
-`README`	How the workbook works and definitions
-`Summary`	Headline KPIs and monthly trend (live formulas) with charts
-`What_If`	Impact model: change the yellow assumption cells; sensitivity table
-`Data_Orders`	One row per delivered order (96,203 rows) that feeds every formula
-`Late_vs_Review`	Review score and negative-review rate by delivery performance
-`State_Priority`	Excess late orders by state with a "Fix?" toggle that feeds the What_If tab
-`Seller_Scorecard`, `Seller_Priority`, `Category_Performance`	Static SQL outputs
-Power BI model
-Three tables (`fact_orders`, `fact_order_items`, `dim_sellers`) plus a `dim_date` table. All measures (Late Rate, Excess Late Orders, Negative Review %, Seller Excess Late, etc.) are documented in docs/PowerBI_Build_Guide.md.
+# Problem Statement
 
-6. Data
-Source: Brazilian E-Commerce Public Dataset by Olist (Kaggle), released under CC BY-NC-SA 4.0. The raw files are not committed to this repository; download them yourself.
-Table	Rows	Grain
-`orders`	99,441	one row per order (status and timestamps)
-`order_items`	112,650	one row per item in an order (price, freight, seller)
-`order_payments`	103,886	one row per payment
-`order_reviews`	99,224	review score and comments
-`customers`	99,441	customer and state
-`sellers`	3,095	seller and state
-`products`	32,951	product category
-`category_translation`	71	Portuguese → English category names
-Analysis window: Jan 2017 – Aug 2018, delivered orders only (96,203 orders).
+Olist is a Brazilian marketplace that connects small sellers to customers. Leadership sees an average review of 4.16 and an 8.13% late-delivery rate, but does not know how much lateness really hurts satisfaction, where it is concentrated, or what is worth fixing first. Without this clarity, operational effort may go to low-impact areas.
 
-7. Metric definitions
-Metric	Definition
-GMV	Sum of item prices, excluding freight
-AOV	GMV ÷ delivered orders
-Late order	Delivered after the estimated delivery date shown at checkout
-Late rate	Late orders ÷ delivered orders
-Days vs promise	Actual delivery date minus estimated date (positive = late)
-Negative review	Review score of 2 or lower
-Excess late orders	Late orders − (orders × national late rate). Ranks where the most extra problem orders occur, so small states with a high rate don't dominate
+The problem is to analyse the order data, uncover the patterns behind late deliveries and bad reviews, and build a prioritised plan with an estimate of its impact.
 
-8. How to reproduce
-Requirements: Python 3.9+, `pandas`, `openpyxl`
-```bash
-git clone https://github.com/<your-username>/olist-delivery-sales-analysis.git
-cd olist-delivery-sales-analysis
-pip install -r requirements.txt
+# Approach
+- Data Understanding
+- Reviewed 8 related tables to understand the structure, joins, data quality and grain (order, item, review).
+- Data Cleaning and Modelling
+- Kept delivered orders only, fixed duplicate rows caused by multi-item orders and multiple reviews, and built reusable SQL views.
+- Exploratory Data Analysis (EDA)
+- Studied GMV, order value, delivery time, late rate and review scores over time, by state, category and seller.
+- Driver Analysis
+- Measured how delivery delay affects review scores and repeat purchase.
+- Prioritisation and What-if Analysis
+- Built an “excess late orders” metric and an Excel what-if model to estimate the impact of fixing the worst areas.
+- Final Recommendations
+- Summarised findings and gave data-backed actions for operations.
 
-# 1. Download the Olist dataset from Kaggle and put the CSVs in ./data/
-# 2. Build the database, run all SQL, build the workbook and dashboard blueprint
-./run_all.sh
-```
-Then:
-Open `excel/Olist_Delivery_Sales_Analysis.xlsx`; the What_If tab is the place to experiment.
-To build the Power BI report, follow docs/PowerBI_Build_Guide.md and import the CSVs in `powerbi/`.
-Sanity checks: 96,203 orders · GMV ≈ R$13.18M · AOV ≈ R$137 · late rate 8.13% · average review 4.16.
-Porting the SQL 
-SQLite	MySQL	PostgreSQL
-`julianday(a) - julianday(b)`	`DATEDIFF(a, b)`	`EXTRACT(EPOCH FROM (a - b)) / 86400`
-`substr(x, 1, 7)`	`LEFT(x, 7)`	`LEFT(x, 7)`
-`AVG(condition)`	works	`AVG((condition)::int)`
-9. Skills demonstrated
-SQL: multi-table joins, CTEs, window functions, conditional aggregation, views, cohort analysis, de-duplication, business-defined metrics
-Excel: `SUMIFS` / `COUNTIFS` / `AVERAGEIFS` / `SUMPRODUCT` over 96K rows, what-if modelling with a sensitivity table, conditional formatting, charts
-Power BI: star-style data model, DAX measures, a Date table, finding-led dashboard design
-Business analysis: problem framing, prioritisation, honest sizing of impact, recommendations tied to evidence
+Raw Data
+📎 [ATTACH DATA LINK HERE] → Kaggle: Brazilian E-Commerce Public Dataset by Olist (CC BY-NC-SA 4.0)
 
-10. Limitations
-Correlation, not proof of causation. Late orders may differ in category, weight and region from on-time orders; a regression or matched comparison is needed to claim a precise effect.
-No cost or margin data, so profit impact is not sized; GMV excludes freight.
-Reviews are self-selected (about 1% of orders have none, and unhappy customers are more likely to write one).
-A 2016–2018 sample. Patterns matter more than absolute volumes.
-Seller late rates are item-weighted, so multi-item orders count once per item.
+Data Understanding
+Table	Rows	What it holds
+orders	99,441	order status and timestamps
+order_items	112,650	items, price, freight, seller
+order_payments	103,886	payment type and value
+order_reviews	99,224	review score and comments
+customers	99,441	customer and state
+sellers	3,095	seller and state
+products	32,951	product category
+category_translation	71	Portuguese to English names
 
-11. Next steps
-Add carrier and package-weight data and build an order-level late-risk model (logistic regression) to flag at-risk shipments before dispatch.
-Control for category, weight and distance to isolate the effect of lateness on reviews.
-A/B test region-specific delivery promises.
-Adapt the framework to quick commerce, where "late" is measured in minutes and analysed by dark store and delivery slot.
+🖼️ 📎 [ATTACH IMAGE HERE: screenshot of your tables or the table relationships]
 
-12. About me
-[Your Name]: aspiring Business / Data Analyst focused on e-commerce and quick commerce, based in Bengaluru.
-LinkedIn: [your LinkedIn URL]
-Email: [your email]
----
-Dataset © Olist, used under CC BY-NC-SA 4.0. This is an independent portfolio project and is not affiliated with Olist.
+Data Dictionary
+Column	Meaning
+order_purchase_timestamp	when the customer placed the order
+order_estimated_delivery_date	delivery date promised at checkout
+order_delivered_customer_date	actual delivery date
+price / freight_value	item price and shipping cost
+review_score	1 to 5 stars
+customer_state / seller_state	Brazilian state codes
+
+🖼️ 📎 [ATTACH IMAGE HERE: data dictionary or ER diagram, optional]
+
+Exploratory Data Analysis (EDA)
+
+1. Delivered orders only
+Cancelled and unavailable orders have no delivery outcome. Only delivered orders with a delivery date were kept (8 delivered orders had no date and were dropped).
+
+2. Analysis window
+2016 and Sep–Oct 2018 contain very few orders and would distort trends, so the window is Jan 2017 to Aug 2018 (96,203 orders).
+
+3. Multi-item orders
+One order can have several item rows, so revenue was aggregated to order level before any order metric was calculated.
+
+sql
+SELECT order_id, COUNT(*) AS items,
+       SUM(price) AS item_revenue,
+       SUM(freight_value) AS freight
+FROM order_items
+GROUP BY order_id;
+
+4. Multiple reviews per order
+Some orders have more than one review. The scores were averaged to keep one row per order.
+
+sql
+SELECT order_id, AVG(review_score) AS review_score
+FROM order_reviews
+GROUP BY order_id;
+
+5. Defining a late order
+A late order is one delivered after the date promised at checkout.
+
+sql
+CASE WHEN order_delivered_customer_date > order_estimated_delivery_date
+     THEN 1 ELSE 0 END AS is_late
+
+6. Delay buckets
+Orders were grouped by days late versus the promise, to see where reviews break.
+
+sql
+CASE WHEN days_vs_promise <= -7 THEN '1. 7+ days early'
+     WHEN days_vs_promise <= 0  THEN '2. 0-7 days early'
+     WHEN days_vs_promise <= 3  THEN '3. 1-3 days late'
+     WHEN days_vs_promise <= 7  THEN '4. 4-7 days late'
+     WHEN days_vs_promise <= 14 THEN '5. 8-14 days late'
+     ELSE '6. 15+ days late' END AS bucket
+
+7. Category names
+Product categories were translated to English by joining the translation table.
+
+Univariate Analysis
+
+🖼️ 📎 [ATTACH IMAGE HERE: Monthly GMV and Late Rate charts from your Power BI]
+
+Observation:
+Monthly GMV grew about 9x, from R$112K in Jan-17 to R$988K in Nov-17 (Black Friday), then stayed at a higher level. The late rate stayed near 3–5% for most of 2017, then spiked to 14.3% in Nov-17 and 21.4% in Mar-18.
+
+Note: We have many more observations
+📎 [ATTACH EXCEL FILE LINK HERE]: Olist_Delivery_Sales_Analysis.xlsx
+
+Bivariate Analysis
+
+🖼️ 📎 [ATTACH IMAGE HERE: Avg Review by Delay Bucket chart]
+
+Observation:
+Orders up to 3 days late still score 3.77, but at 4–7 days late the average review falls to 2.32 and beyond 8 days it sits at about 1.7. Orders that arrive on time score 4.30.
+
+🖼️ 📎 [ATTACH IMAGE HERE: Excess Late Orders by State chart]
+
+Observation:
+Rio de Janeiro has the most excess late orders (663), followed by Bahia (193) and Ceará (92).
+
+Note: We have many more observations
+📎 [ATTACH EXCEL FILE LINK HERE]
+
+What-if Analysis (Optimisation)
+
+🖼️ 📎 [ATTACH IMAGE HERE: screenshot of the What_If tab]
+
+Share of excess lateness eliminated (RJ, BA, CE)	Late orders avoided	New late rate	Negative reviews avoided
+25%	237	7.88%	106
+50%	474	7.64%	212
+75%	711	7.39%	319
+100%	948	7.15%	425
+Insights
+
+1. Insights from Univariate Analysis
+
+Average delivery takes 12.5 days, while the average promise is 23.6 days. Most orders arrive early, so lateness is a tail problem.
+The overall late rate is 8.13%, and freight is 14.3% of order value.
+The top 10% of sellers generate 67% of GMV.
+Health & Beauty (10.1%), Watches & Gifts (9.6%) and Bed, Bath & Table (8.4%) are the biggest categories by GMV.
+Nov-17 (Black Friday month) was the peak: 7,288 orders and R$988K GMV.
+
+2. Insights from Bivariate Analysis
+
+Late orders average a review of 2.57, against 4.30 for on-time orders.
+54% of late orders get a 1–2 star review, against 9.2% for on-time orders, about 6 times higher.
+Rio de Janeiro, Bahia and Ceará hold 66% of all excess late orders; Rio alone holds 46%. São Paulo has a late rate of only 5.9%, against 13.5% in Rio.
+Cross-state orders are late 9.0% of the time and take 15.0 days, against 6.0% and 7.9 days for same-state orders.
+Black Friday month was 7.6% of orders but 13.3% of all late orders. The late rate stayed at 20–23% for six days in a row.
+Customers whose first order was late repeat 28% less often (2.16% vs 2.98%). Only about 3% of customers ever reorder, so the revenue effect is small.
+
+3. Insights from What-if Analysis
+
+Removing half of the excess lateness in RJ, BA and CE avoids about 474 late orders and 212 negative reviews, and brings the national late rate from 8.13% to 7.64%.
+The repeat-purchase revenue gain is only about R$530, so the real value is reputation and ratings.
+Recommendations
+
+Fix last-mile delivery in RJ, BA and CE first
+These three states hold 66% of excess late orders. Carrier reviews and regional fulfilment changes here give the biggest gain.
+
+Put the 5 worst high-volume sellers on an SLA plan
+Five sellers add about 214 excess late orders, including one in MA with a 23.6% late rate. Targeted shipping-time improvements are controllable and quick.
+
+Build a peak-season playbook
+Black Friday produced 13.3% of late orders from 7.6% of volume. Plan carrier capacity, order cut-offs and delivery estimates before big campaigns.
+
+A/B test region-aware delivery promises
+Promises average 23.6 days against 12.5 actual. Testing longer promises in high-risk regions could cut late orders. This is a hypothesis to test.
+
+Track late rate and review score monthly
+Use the Power BI dashboard to watch the late rate, excess late orders and negative review percentage.
+
+Conclusion
+
+This project analysed 96,203 marketplace orders using SQL, Excel and Power BI. Late deliveries clearly hurt customer satisfaction, and the damage starts when an order is 4 or more days late. Lateness is concentrated in three states, a handful of sellers and peak-demand periods, so a focused plan can fix a large share of it.
+
+The what-if model shows that halving excess lateness in the priority states avoids about 474 late orders and 212 negative reviews. Because repeat purchase is rare, the main benefit is better reviews and reputation, not repeat sales. The analysis is correlational, has no cost or margin data and uses a 2016–2018 sample, so the next step is to test the recommendations with an experiment.
