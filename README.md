@@ -25,7 +25,7 @@ The problem is to analyse the order data, uncover the patterns behind late deliv
 - Summarised findings and gave data-backed actions for operations.
 
 Raw Data
-📎 [ATTACH DATA LINK HERE] → Kaggle: Brazilian E-Commerce Public Dataset by Olist (CC BY-NC-SA 4.0)
+https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
 
 Data Understanding
 Table	Rows	What it holds
@@ -36,22 +36,17 @@ order_reviews	99,224	review score and comments
 customers	99,441	customer and state
 sellers	3,095	seller and state
 products	32,951	product category
-category_translation	71	Portuguese to English names
 
-🖼️ 📎 [ATTACH IMAGE HERE: screenshot of your tables or the table relationships]
+
+🖼️ 📎<img width="607" height="217" alt="image" src="https://github.com/user-attachments/assets/f273dddc-06a2-4d56-bcc8-7fede1fea3dc" />
+
 
 Data Dictionary
-Column	Meaning
-order_purchase_timestamp	when the customer placed the order
-order_estimated_delivery_date	delivery date promised at checkout
-order_delivered_customer_date	actual delivery date
-price / freight_value	item price and shipping cost
-review_score	1 to 5 stars
-customer_state / seller_state	Brazilian state codes
+<img width="738" height="182" alt="image" src="https://github.com/user-attachments/assets/8f81938d-be2c-427a-995d-f30eae5fe5d0" />
 
-🖼️ 📎 [ATTACH IMAGE HERE: data dictionary or ER diagram, optional]
+---
 
-Exploratory Data Analysis (EDA)
+# Exploratory Data Analysis (EDA)
 
 1. Delivered orders only
 Cancelled and unavailable orders have no delivery outcome. Only delivered orders with a delivery date were kept (8 delivered orders had no date and were dropped).
@@ -63,44 +58,49 @@ Cancelled and unavailable orders have no delivery outcome. Only delivered orders
 One order can have several item rows, so revenue was aggregated to order level before any order metric was calculated.
 
 sql
+~~~
 SELECT order_id, COUNT(*) AS items,
        SUM(price) AS item_revenue,
        SUM(freight_value) AS freight
 FROM order_items
 GROUP BY order_id;
+~~~
 
 4. Multiple reviews per order
 Some orders have more than one review. The scores were averaged to keep one row per order.
 
 sql
+~~~
 SELECT order_id, AVG(review_score) AS review_score
 FROM order_reviews
 GROUP BY order_id;
+~~~
 
 5. Defining a late order
 A late order is one delivered after the date promised at checkout.
 
 sql
+~~~
 CASE WHEN order_delivered_customer_date > order_estimated_delivery_date
      THEN 1 ELSE 0 END AS is_late
-
+~~~
 6. Delay buckets
 Orders were grouped by days late versus the promise, to see where reviews break.
 
 sql
+~~~
 CASE WHEN days_vs_promise <= -7 THEN '1. 7+ days early'
      WHEN days_vs_promise <= 0  THEN '2. 0-7 days early'
      WHEN days_vs_promise <= 3  THEN '3. 1-3 days late'
      WHEN days_vs_promise <= 7  THEN '4. 4-7 days late'
      WHEN days_vs_promise <= 14 THEN '5. 8-14 days late'
      ELSE '6. 15+ days late' END AS bucket
+~~~
 
-7. Category names
-Product categories were translated to English by joining the translation table.
+# Univariate Analysis
 
-Univariate Analysis
+<img width="802" height="447" alt="image" src="https://github.com/user-attachments/assets/9901e117-3204-46c5-a83d-91fbf22be1f9" />
 
-🖼️ 📎 [ATTACH IMAGE HERE: Monthly GMV and Late Rate charts from your Power BI]
 
 Observation:
 Monthly GMV grew about 9x, from R$112K in Jan-17 to R$988K in Nov-17 (Black Friday), then stayed at a higher level. The late rate stayed near 3–5% for most of 2017, then spiked to 14.3% in Nov-17 and 21.4% in Mar-18.
